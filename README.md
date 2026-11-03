@@ -2,6 +2,8 @@
 
 App Android e firmware Arduino Nano per comunicare con un modulo Bluetooth classico HC-06 tramite profilo seriale SPP.
 
+Per il pinout completo, il protocollo, lo stato degli upload e le istruzioni per riprendere lo sviluppo, consulta [HANDOFF.md](HANDOFF.md).
+
 ## Collegamenti
 
 - HC-06 TXD -> Arduino Nano D4 (RX di `SoftwareSerial`)
@@ -17,11 +19,15 @@ App Android e firmware Arduino Nano per comunicare con un modulo Bluetooth class
 - D7 e D8 non sono usati con questa mappatura
 - Collega GND dell'alimentazione motori, GND del L298N e GND del Nano in comune. Alimenta i motori dal driver, non dal pin 5 V del Nano.
 
-Rimuovi i jumper ENA/ENB del modulo L298N se presenti, altrimenti i pin PWM del Nano non controlleranno la velocità. Lo sketch usa 9600 baud e controlla anche il LED integrato sul pin `LED_BUILTIN`.
+In questo cablaggio ENA ed ENB sono collegati direttamente a D3 e D9 per il PWM. Non rimuovere altri ponticelli per questa configurazione: `5V_EN`, `CSA`, `CSB`, `UR1`, `UR2` e `UR3` non sono i jumper ENA/ENB. Lo sketch usa 9600 baud e controlla anche il LED integrato sul pin `LED_BUILTIN`.
 
 ## Comandi motori
 
-Con HC-06 connesso, l'app separa i due ruoli:
+Con HC-06 connesso, l'app offre un joystick: sinistra/destra controllano MotorA (sterzo), su/giù controllano MotorB (trazione), e le diagonali li combinano. La velocità segue la distanza dal centro; quando si rilascia il joystick, `STOP` arresta entrambi i motori.
+
+Durante il movimento il joystick invia un frame `JOY <sterzo> <trazione>` con valori firmati da -255 a 255, senza attendere una risposta Bluetooth per ogni aggiornamento: così si riducono le collisioni sulla seriale software dell'HC-06.
+
+L'app offre anche i pulsanti e i cursori manuali per i due ruoli:
 
 - **MotorA / sterzo**: `STEER_LEFT`, `STEER_RIGHT`, `STEER_STOP` e velocità `STEER_SPEED 0..255`.
 - **MotorB / trazione**: `DRIVE_FORWARD`, `DRIVE_BACKWARD`, `DRIVE_STOP` e velocità `TRACTION_SPEED 0..255`.
@@ -38,3 +44,13 @@ I comandi devono terminare con newline. Gli alias `LEFT`, `RIGHT`, `FORWARD`, `B
 5. Usa i comandi separati per sterzo e trazione oppure invia `LED ON` o `LED OFF`.
 
 L'app richiede un telefono Android con Bluetooth classico; l'emulatore Android non può sostituire un collegamento reale con HC-06.
+
+## Sviluppo
+
+Dalla directory `android-app/`, compila l'APK ed esegui i test unitari con:
+
+```bash
+./gradlew assembleDebug testDebugUnitTest
+```
+
+Il percorso dell'Arduino CLI incluso in Arduino IDE, i comandi completi di compilazione/upload e la variante bootloader usata sono riportati in [HANDOFF.md](HANDOFF.md).

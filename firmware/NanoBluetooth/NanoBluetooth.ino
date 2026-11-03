@@ -65,10 +65,44 @@ bool parseSpeed(const char *text, byte *speed) {
   return true;
 }
 
+bool parseJoystick(const char *text, int *steering, int *traction) {
+  char *separator;
+  const long steeringValue = strtol(text, &separator, 10);
+  if (separator == text || *separator != ' ') {
+    return false;
+  }
+
+  const char *tractionText = separator + 1;
+  char *endPointer;
+  const long tractionValue = strtol(tractionText, &endPointer, 10);
+  if (endPointer == tractionText || *endPointer != '\0' ||
+      steeringValue < -255 || steeringValue > 255 ||
+      tractionValue < -255 || tractionValue > 255) {
+    return false;
+  }
+
+  *steering = static_cast<int>(steeringValue);
+  *traction = static_cast<int>(tractionValue);
+  return true;
+}
+
 void processCommand() {
   commandBuffer[commandLength] = '\0';
 
-  if (strcmp(commandBuffer, "STEER_LEFT") == 0 || strcmp(commandBuffer, "LEFT") == 0) {
+  if (strncmp(commandBuffer, "JOY ", 4) == 0) {
+    int steeringValue;
+    int tractionValue;
+    if (parseJoystick(commandBuffer + 4, &steeringValue, &tractionValue)) {
+      steeringDirection = (steeringValue > 0) - (steeringValue < 0);
+      steeringSpeed = static_cast<byte>(abs(steeringValue));
+      tractionDirection = (tractionValue > 0) - (tractionValue < 0);
+      tractionSpeed = static_cast<byte>(abs(tractionValue));
+      updateSteering();
+      updateTraction();
+    } else {
+      hc06.println("ERR: JOY richiede due valori tra -255 e 255");
+    }
+  } else if (strcmp(commandBuffer, "STEER_LEFT") == 0 || strcmp(commandBuffer, "LEFT") == 0) {
     steeringDirection = 1;
     updateSteering();
     hc06.println("OK: STEER_LEFT");
