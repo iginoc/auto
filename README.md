@@ -21,9 +21,13 @@ Rimuovi i jumper ENA/ENB del modulo L298N se presenti, altrimenti i pin PWM del 
 
 ## Comandi motori
 
-Con HC-06 connesso, l'app mostra i pulsanti Avanti, Indietro, Sinistra, Destra e Stop, oltre allo slider velocità (0-255). La direzione resta attiva fino a un altro comando o a Stop.
+Con HC-06 connesso, l'app separa i due ruoli:
 
-Il protocollo seriale accetta `FORWARD`, `BACKWARD`, `LEFT`, `RIGHT`, `STOP` e `SPEED 0..255`, ciascuno terminato da newline. I comandi `LED ON` e `LED OFF` restano disponibili.
+- **MotorA / sterzo**: `STEER_LEFT`, `STEER_RIGHT`, `STEER_STOP` e velocità `STEER_SPEED 0..255`.
+- **MotorB / trazione**: `DRIVE_FORWARD`, `DRIVE_BACKWARD`, `DRIVE_STOP` e velocità `TRACTION_SPEED 0..255`.
+- `STOP` arresta entrambi i motori. `LED ON` e `LED OFF` controllano il LED integrato.
+
+I comandi devono terminare con newline. Gli alias `LEFT`, `RIGHT`, `FORWARD`, `BACKWARD` e `SPEED 0..255` sono mantenuti: i primi due agiscono solo sullo sterzo, gli altri solo sulla trazione. Ogni motore resta attivo fino al proprio comando di stop o a `STOP` generale. Se il verso fisico dello sterzo è invertito, scambia i due fili del MotorA sulle uscite del driver.
 
 ## Avvio
 
@@ -31,6 +35,6 @@ Il protocollo seriale accetta `FORWARD`, `BACKWARD`, `LEFT`, `RIGHT`, `STOP` e `
 2. Associa HC-06 dalle impostazioni Bluetooth del telefono. Il PIN predefinito dipende dal modulo, spesso `1234` o `0000`.
 3. Apri il progetto `android-app` in Android Studio oppure esegui `./gradlew assembleDebug` dalla cartella `android-app`.
 4. Nell'app concedi il permesso Dispositivi nelle vicinanze, aggiorna l'elenco e connettiti a HC-06.
-5. Invia `LED ON` o `LED OFF`; puoi anche inviare altri comandi testuali terminati da newline.
+5. Usa i comandi separati per sterzo e trazione oppure invia `LED ON` o `LED OFF`.
 
 L'app richiede un telefono Android con Bluetooth classico; l'emulatore Android non può sostituire un collegamento reale con HC-06.

@@ -42,7 +42,8 @@ fun BluetoothScreen(
 ) {
   val state by controller.state.collectAsStateWithLifecycle()
   var message by remember { mutableStateOf("") }
-  var motorSpeed by remember { mutableStateOf(180) }
+  var steeringSpeed by remember { mutableStateOf(180) }
+  var tractionSpeed by remember { mutableStateOf(180) }
 
   Scaffold(
     topBar = { TopAppBar(title = { Text("Nano Bluetooth") }) },
@@ -91,26 +92,38 @@ fun BluetoothScreen(
       }
 
       if (state.connectedName != null) {
-        Text("COMANDI MOTORI L298N", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-          Button(onClick = { controller.sendLine("FORWARD") }, modifier = Modifier.fillMaxWidth(0.58f)) { Text("AVANTI") }
-        }
+        Text("STERZO · MOTOR A", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          Button(onClick = { controller.sendLine("LEFT") }, modifier = Modifier.weight(1f)) { Text("SINISTRA") }
-          Button(onClick = { controller.sendLine("STOP") }, modifier = Modifier.weight(1f)) { Text("STOP") }
-          Button(onClick = { controller.sendLine("RIGHT") }, modifier = Modifier.weight(1f)) { Text("DESTRA") }
+          Button(onClick = { controller.sendLine("STEER_LEFT") }, modifier = Modifier.weight(1f)) { Text("SINISTRA") }
+          OutlinedButton(onClick = { controller.sendLine("STEER_STOP") }, modifier = Modifier.weight(1f)) { Text("STOP STERZO") }
+          Button(onClick = { controller.sendLine("STEER_RIGHT") }, modifier = Modifier.weight(1f)) { Text("DESTRA") }
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-          Button(onClick = { controller.sendLine("BACKWARD") }, modifier = Modifier.fillMaxWidth(0.58f)) { Text("INDIETRO") }
-        }
-        Text("Velocità: $motorSpeed / 255", style = MaterialTheme.typography.bodyMedium)
+        Text("Velocità sterzo: $steeringSpeed / 255", style = MaterialTheme.typography.bodyMedium)
         Slider(
-          value = motorSpeed.toFloat(),
-          onValueChange = { motorSpeed = it.roundToInt() },
-          onValueChangeFinished = { controller.sendLine("SPEED $motorSpeed") },
+          value = steeringSpeed.toFloat(),
+          onValueChange = { steeringSpeed = it.roundToInt() },
+          onValueChangeFinished = { controller.sendLine("STEER_SPEED $steeringSpeed") },
           valueRange = 0f..255f,
           enabled = state.connectedName != null,
         )
+
+        HorizontalDivider()
+        Text("TRAZIONE · MOTOR B", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          Button(onClick = { controller.sendLine("DRIVE_BACKWARD") }, modifier = Modifier.weight(1f)) { Text("INDIETRO") }
+          OutlinedButton(onClick = { controller.sendLine("DRIVE_STOP") }, modifier = Modifier.weight(1f)) { Text("STOP TRAZIONE") }
+          Button(onClick = { controller.sendLine("DRIVE_FORWARD") }, modifier = Modifier.weight(1f)) { Text("AVANTI") }
+        }
+        Text("Velocità trazione: $tractionSpeed / 255", style = MaterialTheme.typography.bodyMedium)
+        Slider(
+          value = tractionSpeed.toFloat(),
+          onValueChange = { tractionSpeed = it.roundToInt() },
+          onValueChangeFinished = { controller.sendLine("TRACTION_SPEED $tractionSpeed") },
+          valueRange = 0f..255f,
+          enabled = state.connectedName != null,
+        )
+
+        Button(onClick = { controller.sendLine("STOP") }, modifier = Modifier.fillMaxWidth()) { Text("ARRESTA TUTTO") }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
           OutlinedButton(onClick = { controller.sendLine("LED ON") }, modifier = Modifier.weight(1f)) { Text("LED ON") }
           OutlinedButton(onClick = { controller.sendLine("LED OFF") }, modifier = Modifier.weight(1f)) { Text("LED OFF") }

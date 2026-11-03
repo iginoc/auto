@@ -14,59 +14,108 @@ const byte MOTOR_B_ENABLE_PIN = 9;
 SoftwareSerial hc06(HC06_RX_PIN, HC06_TX_PIN);
 char commandBuffer[COMMAND_BUFFER_SIZE];
 size_t commandLength = 0;
-byte motorSpeed = 180;
+byte steeringSpeed = 180;
+byte tractionSpeed = 180;
+int steeringDirection = 0;
+int tractionDirection = 0;
 
 void setMotor(int speed, byte enablePin, byte in1Pin, byte in2Pin) {
+  digitalWrite(in1Pin, LOW);
+  digitalWrite(in2Pin, LOW);
+
   if (speed > 0) {
     digitalWrite(in1Pin, HIGH);
-    digitalWrite(in2Pin, LOW);
   } else if (speed < 0) {
-    digitalWrite(in1Pin, LOW);
     digitalWrite(in2Pin, HIGH);
-  } else {
-    digitalWrite(in1Pin, LOW);
-    digitalWrite(in2Pin, LOW);
   }
 
   analogWrite(enablePin, abs(speed));
 }
 
-void driveMotors(int motorA, int motorB) {
-  setMotor(motorA, MOTOR_A_ENABLE_PIN, MOTOR_A_IN1_PIN, MOTOR_A_IN2_PIN);
-  setMotor(motorB, MOTOR_B_ENABLE_PIN, MOTOR_B_IN1_PIN, MOTOR_B_IN2_PIN);
+void updateSteering() {
+  setMotor(steeringDirection * steeringSpeed, MOTOR_A_ENABLE_PIN, MOTOR_A_IN1_PIN, MOTOR_A_IN2_PIN);
+}
+
+void updateTraction() {
+  setMotor(tractionDirection * tractionSpeed, MOTOR_B_ENABLE_PIN, MOTOR_B_IN1_PIN, MOTOR_B_IN2_PIN);
+}
+
+void stopSteering() {
+  steeringDirection = 0;
+  updateSteering();
+}
+
+void stopTraction() {
+  tractionDirection = 0;
+  updateTraction();
 }
 
 void stopMotors() {
-  driveMotors(0, 0);
+  stopSteering();
+  stopTraction();
+}
+
+bool parseSpeed(const char *text, byte *speed) {
+  char *endPointer;
+  const long requestedSpeed = strtol(text, &endPointer, 10);
+  if (*text == '\0' || *endPointer != '\0' || requestedSpeed < 0 || requestedSpeed > 255) {
+    return false;
+  }
+  *speed = static_cast<byte>(requestedSpeed);
+  return true;
 }
 
 void processCommand() {
   commandBuffer[commandLength] = '\0';
 
-  if (strcmp(commandBuffer, "FORWARD") == 0) {
-    driveMotors(motorSpeed, motorSpeed);
-    hc06.println("OK: FORWARD");
-  } else if (strcmp(commandBuffer, "BACKWARD") == 0) {
-    driveMotors(-motorSpeed, -motorSpeed);
-    hc06.println("OK: BACKWARD");
-  } else if (strcmp(commandBuffer, "LEFT") == 0) {
-    driveMotors(-motorSpeed, motorSpeed);
-    hc06.println("OK: LEFT");
-  } else if (strcmp(commandBuffer, "RIGHT") == 0) {
-    driveMotors(motorSpeed, -motorSpeed);
-    hc06.println("OK: RIGHT");
+  if (strcmp(commandBuffer, "STEER_LEFT") == 0 || strcmp(commandBuffer, "LEFT") == 0) {
+    steeringDirection = 1;
+    updateSteering();
+    hc06.println("OK: STEER_LEFT");
+  } else if (strcmp(commandBuffer, "STEER_RIGHT") == 0 || strcmp(commandBuffer, "RIGHT") == 0) {
+    steeringDirection = -1;
+    updateSteering();
+    hc06.println("OK: STEER_RIGHT");
+  } else if (strcmp(commandBuffer, "STEER_STOP") == 0) {
+    stopSteering();
+    hc06.println("OK: STEER_STOP");
+  } else if (strcmp(commandBuffer, "DRIVE_FORWARD") == 0 || strcmp(commandBuffer, "FORWARD") == 0) {
+    tractionDirection = 1;
+    updateTraction();
+    hc06.println("OK: DRIVE_FORWARD");
+  } else if (strcmp(commandBuffer, "DRIVE_BACKWARD") == 0 || strcmp(commandBuffer, "BACKWARD") == 0) {
+    tractionDirection = -1;
+    updateTraction();
+    hc06.println("OK: DRIVE_BACKWARD");
+  } else if (strcmp(commandBuffer, "DRIVE_STOP") == 0) {
+    stopTraction();
+    hc06.println("OK: DRIVE_STOP");
   } else if (strcmp(commandBuffer, "STOP") == 0) {
     stopMotors();
     hc06.println("OK: STOP");
   } else if (strncmp(commandBuffer, "SPEED ", 6) == 0) {
-    char *endPointer;
-    const long requestedSpeed = strtol(commandBuffer + 6, &endPointer, 10);
-    if (*endPointer == '\0' && requestedSpeed >= 0 && requestedSpeed <= 255) {
-      motorSpeed = static_cast<byte>(requestedSpeed);
-      hc06.print("OK: SPEED ");
-      hc06.println(motorSpeed);
+    if (parseSpeed(commandBuffer + 6, &tractionSpeed)) {
+      updateTraction();
+      hc06.print("OK: TRACTION_SPEED ");
+      hc06.println(tractionSpeed);
     } else {
       hc06.println("ERR: SPEED deve essere 0..255");
+    }
+  } else if (strncmp(commandBuffer, "TRACTION_SPEED ", 15) == 0) {
+    if (parseSpeed(commandBuffer + 15, &tractionSpeed)) {
+      updateTraction();
+      hc06.print("OK: TRACTION_SPEED ");
+      hc06.println(tractionSpeed);
+    } else {
+      hc06.println("ERR: TRACTION_SPEED deve essere 0..255");
+    }
+  } else if (strncmp(commandBuffer, "STEER_SPEED ", 12) == 0) {
+    if (parseSpeed(commandBuffer + 12, &steeringSpeed)) {
+      updateSteering();
+      hc06.print("OK: STEER_SPEED ");
+      hc06.println(steeringSpeed);
+    } else {
+      hc06.println("ERR: STEER_SPEED deve essere 0..255");
     }
   } else if (strcmp(commandBuffer, "LED ON") == 0) {
     digitalWrite(LED_BUILTIN, HIGH);
